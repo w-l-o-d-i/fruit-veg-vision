@@ -37,11 +37,17 @@ export async function loadModel(): Promise<void> {
   if (model) return;
 
   try {
+    // Initialize TensorFlow.js
     await tf.ready();
+    
+    // Set WASM path for TFLite (from CDN)
+    tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/');
+    
     // Prefer WebGL backend for performance
     if (tf.getBackend() !== 'webgl') {
       try { await tf.setBackend('webgl'); } catch { await tf.setBackend('cpu'); }
     }
+    
     model = await tflite.loadTFLiteModel("/models/mobile_fruit_classifier.tflite");
     console.log("Model loaded successfully (CDN)");
   } catch (error) {
