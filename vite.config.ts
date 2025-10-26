@@ -27,5 +27,18 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: "esnext",
+    // Ensure large files like the model are handled correctly
+    assetsInlineLimit: 0,
+    rollupOptions: {
+      output: {
+        // Keep model files in their original location
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.tflite')) {
+            return 'models/[name][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
+      },
+    },
   },
 }));
