@@ -41,7 +41,7 @@ export async function loadModel(): Promise<void> {
     await tf.ready();
     
     // Set WASM path for TFLite (from CDN)
-    tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/');
+    tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.13/dist/');
     
     // Prefer WebGL backend for performance
     if (tf.getBackend() !== 'webgl') {
@@ -49,7 +49,18 @@ export async function loadModel(): Promise<void> {
     }
     
     model = await tflite.loadTFLiteModel("/models/mobile_fruit_classifier.tflite");
-    console.log("Model loaded successfully (CDN)");
+    // Warmup to verify runtime + model work end-to-end
+    try {
+      const warmup = tf.zeros([1, 224, 224, 3], 'float32');
+      const out = model.predict(warmup);
+      await out.data?.();
+      out.dispose?.();
+      warmup.dispose?.();
+      console.log("Model loaded and warmup successful");
+    } catch (e) {
+      console.error("Model warmup failed", e);
+      throw e;
+    }
   } catch (error) {
     console.error("Error loading model:", error);
     throw error;
