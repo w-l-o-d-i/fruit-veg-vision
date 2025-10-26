@@ -41,7 +41,7 @@ export async function loadModel(): Promise<void> {
     await tf.ready();
     
     // Set WASM path for TFLite (from CDN)
-    tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.13/dist/');
+    tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/');
     
     // Prefer WebGL backend for performance
     if (tf.getBackend() !== 'webgl') {
