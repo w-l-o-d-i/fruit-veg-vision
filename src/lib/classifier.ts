@@ -1,14 +1,7 @@
-import * as tf from "@tensorflow/tfjs-core";
-import "@tensorflow/tfjs-backend-webgl";
-import "@tensorflow/tfjs-backend-cpu";
-import { loadTFLiteModel, TFLiteModel } from "@tensorflow/tfjs-tflite";
-import { fromPixels } from "@tensorflow/tfjs-core/dist/ops/browser";
-import "@tensorflow/tfjs-core/dist/public/chained_ops/resize_nearest_neighbor";
-import "@tensorflow/tfjs-core/dist/public/chained_ops/to_float";
-import "@tensorflow/tfjs-core/dist/public/chained_ops/div";
-import "@tensorflow/tfjs-core/dist/public/chained_ops/expand_dims";
+declare const tf: any;
+declare const tflite: any;
 
-let model: TFLiteModel | null = null;
+let model: any | null = null;
 
 const LABELS = [
   "Tomato 4", "Apple Red Delicious", "Tomato 3", "Huckleberry", "Blueberry",
@@ -45,8 +38,12 @@ export async function loadModel(): Promise<void> {
 
   try {
     await tf.ready();
-    model = await loadTFLiteModel("/models/mobile_fruit_classifier.tflite");
-    console.log("Model loaded successfully");
+    // Prefer WebGL backend for performance
+    if (tf.getBackend() !== 'webgl') {
+      try { await tf.setBackend('webgl'); } catch { await tf.setBackend('cpu'); }
+    }
+    model = await tflite.loadTFLiteModel("/models/mobile_fruit_classifier.tflite");
+    console.log("Model loaded successfully (CDN)");
   } catch (error) {
     console.error("Error loading model:", error);
     throw error;
@@ -62,24 +59,23 @@ export async function classifyImage(imageData: string): Promise<string> {
     const img = new Image();
     img.onload = async () => {
       try {
-        // Preprocess image
-        const tensor = fromPixels(img)
-          .resizeNearestNeighbor([224, 224])
-          .toFloat()
-          .div(255.0)
-          .expandDims(0);
+        const tensor = tf.tidy(() => {
+          const input = tf.browser.fromPixels(img)
+            .resizeNearestNeighbor([224, 224])
+            .toFloat()
+            .div(255.0)
+            .expandDims(0);
+          return input;
+        });
 
-        // Run prediction
-        const predictions = model!.predict(tensor) as tf.Tensor;
-        const probabilities = await predictions.data();
-        
-        // Get top prediction
-        const maxIndex = probabilities.indexOf(Math.max(...Array.from(probabilities)));
+        const predictions = model.predict(tensor);
+        const raw = (await predictions.data()) as Float32Array | number[];
+        const probs = Array.from(raw as any) as number[];
+        const maxIndex = probs.indexOf(Math.max(...probs));
         const predictedLabel = LABELS[maxIndex] || "Unknown";
 
-        // Clean up
         tensor.dispose();
-        predictions.dispose();
+        predictions.dispose?.();
 
         resolve(predictedLabel);
       } catch (error) {
