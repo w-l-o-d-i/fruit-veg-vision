@@ -1,5 +1,12 @@
-import * as tf from "@tensorflow/tfjs";
+import * as tf from "@tensorflow/tfjs-core";
+import "@tensorflow/tfjs-backend-webgl";
+import "@tensorflow/tfjs-backend-cpu";
 import { loadTFLiteModel, TFLiteModel } from "@tensorflow/tfjs-tflite";
+import { fromPixels } from "@tensorflow/tfjs-core/dist/ops/browser";
+import "@tensorflow/tfjs-core/dist/public/chained_ops/resize_nearest_neighbor";
+import "@tensorflow/tfjs-core/dist/public/chained_ops/to_float";
+import "@tensorflow/tfjs-core/dist/public/chained_ops/div";
+import "@tensorflow/tfjs-core/dist/public/chained_ops/expand_dims";
 
 let model: TFLiteModel | null = null;
 
@@ -56,8 +63,7 @@ export async function classifyImage(imageData: string): Promise<string> {
     img.onload = async () => {
       try {
         // Preprocess image
-        const tensor = tf.browser
-          .fromPixels(img)
+        const tensor = fromPixels(img)
           .resizeNearestNeighbor([224, 224])
           .toFloat()
           .div(255.0)
