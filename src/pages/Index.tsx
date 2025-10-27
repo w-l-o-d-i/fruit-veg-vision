@@ -2,32 +2,35 @@ import { useState, useEffect } from "react";
 import { Scale, Loader2 } from "lucide-react";
 import { CameraCapture } from "@/components/CameraCapture";
 import { ResultDisplay } from "@/components/ResultDisplay";
-import { loadModel, classifyImage } from "@/lib/classifier";
-import { fruitWeights } from "@/data/weights";
 import { useToast } from "@/hooks/use-toast";
+import { api, PredictionResult } from "@/lib/api";
 
 const Index = () => {
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [prediction, setPrediction] = useState<string | null>(null);
+  const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const initModel = async () => {
+    const checkBackend = async () => {
       try {
-        await loadModel();
-        setIsModelLoading(false);
+        const health = await api.checkHealth();
+        if (health.status === 'healthy') {
+          setIsModelLoading(false);
+        } else {
+          throw new Error('Backend is not healthy');
+        }
       } catch (error) {
-        console.error("Failed to load model:", error);
+        console.error("Failed to connect to backend:", error);
         toast({
-          title: "Błąd ładowania modelu",
-          description: "Nie udało się załadować modelu AI. Odśwież stronę.",
+          title: "Błąd połączenia",
+          description: "Nie udało się połączyć z serwerem. Upewnij się, że backend działa.",
           variant: "destructive",
         });
       }
     };
-    initModel();
+    checkBackend();
   }, []);
 
   const handleCapture = async (imageData: string) => {
@@ -35,13 +38,20 @@ const Index = () => {
     setIsProcessing(true);
 
     try {
-      const result = await classifyImage(imageData);
+      // Convert base64 to Blob
+      const response = await fetch(imageData);
+      const blob = await response.blob();
+      const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
+      
+      // Send to backend for prediction
+      const result = await api.predict(file);
       setPrediction(result);
+      
     } catch (error) {
-      console.error("Classification error:", error);
+      console.error("Prediction error:", error);
       toast({
         title: "Błąd rozpoznawania",
-        description: "Nie udało się rozpoznać owocu/warzywa. Spróbuj ponownie.",
+        description: error instanceof Error ? error.message : "Wystąpił błąd podczas przetwarzania obrazu.",
         variant: "destructive",
       });
       setCapturedImage(null);
@@ -96,8 +106,13 @@ const Index = () => {
         ) : capturedImage && prediction ? (
           <ResultDisplay
             image={capturedImage}
-            prediction={prediction}
-            weightData={fruitWeights[prediction] || { name: prediction, min: 0, max: 0, avg: 0 }}
+            prediction={prediction.label}
+            weightData={{
+              name: prediction.label,
+              min: parseFloat(prediction.weights.min) || 0,
+              max: parseFloat(prediction.weights.max) || 0,
+              avg: parseFloat(prediction.weights.avg) || 0,
+            }}
             onReset={handleReset}
           />
         ) : (
