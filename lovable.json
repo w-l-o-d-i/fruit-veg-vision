@@ -1,0 +1,9 @@
+{
+  "name": "fruit-veg-vision",
+  "description": "Fruit and Vegetable Recognition App",
+  "runtime": "python3.9",
+  "entry": "wsgi:application",
+  "env": {
+    "ENV": "production"
+  }
+}

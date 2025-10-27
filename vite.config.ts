@@ -7,8 +7,9 @@ import topLevelAwait from "vite-plugin-top-level-await";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  root: '.',  // Explicitly set root directory
-  publicDir: 'public',  // Directory for static assets
+  base: './',  // Use relative paths for assets
+  root: '.',
+  publicDir: 'public',
   server: {
     host: "::",
     port: 8080,
@@ -36,7 +37,8 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: "esnext",
-    // Ensure large files like the model are handled correctly
+    outDir: '../lovable/static',  // Output to lovable/static directory
+    emptyOutDir: true,           // Clear the directory before building
     assetsInlineLimit: 0,
     rollupOptions: {
       output: {

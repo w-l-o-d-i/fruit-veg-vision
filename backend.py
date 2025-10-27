@@ -153,6 +153,9 @@ async def health_check():
 # Mount static files
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
+# Serve the frontend from the static directory
+app.mount("/", StaticFiles(directory=str(BASE_DIR / "static"), html=True), name="frontend")
+
 if __name__ == "__main__":
     # Create static directory if it doesn't exist
     (BASE_DIR / "static").mkdir(exist_ok=True)
